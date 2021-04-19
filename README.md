@@ -1,11 +1,9 @@
-# PowerShell
 .NOTES
 	Name: ADInfo.ps1
 	Original Author: Shane Moore
-    Author: Shane Moore
-    Contributor: Rafael Carvalho
-	Requires: PowerShell and administrator rights on the target ADs
-	server as well as the local machine.
+	Author: Shane Moore
+	Contributor: Rafael Carvalho
+	Requires: PowerShell and administrator rights on the target ADs	server as well as the local machine.
    
 	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
 	BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
