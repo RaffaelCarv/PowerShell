@@ -15,7 +15,7 @@
 	Check the integrity of Active Directory in the internal domain.
 .DESCRIPTION
 	This script checks the integrity of Active Directory for various configuration recommendations.
-.Examples:
+.EXAMPLE
 	This cmdlet with run ADInfo Script by default and run against the local server.
 	.\HealthChecker.ps1
 
