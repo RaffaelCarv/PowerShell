@@ -20,3 +20,35 @@ Remove-AppxPackage -package $appToRemove.packagefullname
 $listOfApps = get-appxpackage
 $appToRemove = $listOfApps | where-object {$_ -like "*Solitaire*"}
 Remove-AppxPackage -package $appToRemove.packagefullname
+
+$listOfApps = get-appxpackage
+$appToRemove = $listOfApps | where-object {$_ -like "*3DViewer*"}
+Remove-AppxPackage -package $appToRemove.packagefullname
+
+$listOfApps = get-appxpackage
+$appToRemove = $listOfApps | where-object {$_ -like "*Messaging*"}
+Remove-AppxPackage -package $appToRemove.packagefullname
+
+$listOfApps = get-appxpackage
+$appToRemove = $listOfApps | where-object {$_ -like "*MicrosoftOfficeHub*"}
+Remove-AppxPackage -package $appToRemove.packagefullname
+
+$listOfApps = get-appxpackage
+$appToRemove = $listOfApps | where-object {$_ -like "*MixedReality*"}
+Remove-AppxPackage -package $appToRemove.packagefullname
+
+$listOfApps = get-appxpackage
+$appToRemove = $listOfApps | where-object {$_ -like "*Print3D*"}
+Remove-AppxPackage -package $appToRemove.packagefullname
+
+$listOfApps = get-appxpackage
+$appToRemove = $listOfApps | where-object {$_ -like "*SkypeApp*"}
+Remove-AppxPackage -package $appToRemove.packagefullname
+
+$listOfApps = get-appxpackage
+$appToRemove = $listOfApps | where-object {$_ -like "*WindowsMaps*"}
+Remove-AppxPackage -package $appToRemove.packagefullname
+
+$listOfApps = get-appxpackage
+$appToRemove = $listOfApps | where-object {$_ -like "*WindowsMaps*"}
+Remove-AppxPackage -package $appToRemove.packagefullname
