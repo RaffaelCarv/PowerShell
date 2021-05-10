@@ -9,8 +9,10 @@
     FileName:    AppRemoval-Unnecessary.ps1
     Author:      Rafael Carvalho
     Created:     2021-04-26
+    Updated:     2021-05-10
     Version history:
     1.0.0 - (2021-04-26) Initial script updated with help section and a fix for randomly freezing
+    1.0.1 - (2021-05-10) Updated with more apps
     
 #>
 $listOfApps = get-appxpackage
