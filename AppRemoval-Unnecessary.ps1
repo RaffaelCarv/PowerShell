@@ -48,7 +48,3 @@ Remove-AppxPackage -package $appToRemove.packagefullname
 $listOfApps = get-appxpackage
 $appToRemove = $listOfApps | where-object {$_ -like "*WindowsMaps*"}
 Remove-AppxPackage -package $appToRemove.packagefullname
-
-$listOfApps = get-appxpackage
-$appToRemove = $listOfApps | where-object {$_ -like "*WindowsMaps*"}
-Remove-AppxPackage -package $appToRemove.packagefullname
