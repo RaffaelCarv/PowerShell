@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Install built-in apps (Dell) from Windows 10.
 .DESCRIPTION
