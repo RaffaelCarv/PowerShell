@@ -35,7 +35,7 @@ New-Item -Path $workdir -ItemType directory
 
 # Download the installer
 
-$source = "https://dzr-api-amzn-us-west-2-fa88.api-upe.p.hmr.sophos.com/api/download/affffec0bccbdb0e100d7962c1c7b7dd/SophosSetup.exe"
+$source = "(Address of your tenant in Sophos)"
 $destination = "$workdir\SophosSetup.exe"
 
 # Check if Invoke-Webrequest exists otherwise execute WebClient
