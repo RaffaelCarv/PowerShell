@@ -1,1 +1,10 @@
-﻿$secpass = Read-Host "Password" -AsSecureStringImport-Csv ListaInseridasNoADCSV.csv |foreach {         $name = "$($_.FirstName) $($_.LastName)"         New-ADUser -GivenName $($_.FirstName) -Surname $($_.LastName) `         -Name $name -SamAccountName $($_.SamAccountName) `         -UserPrincipalName "$($_.SamAccountName)@ADPMS.local" `         -AccountPassword $secpass -Path "OU=Zimbra,OU=PMS,DC=ADPMS,DC=local" `         -Enabled:$true}
+﻿$secpass = Read-Host "Password" -AsSecureString
+Import-Csv ListaInseridasNoADCSV.csv |
+foreach {
+         $name = "$($_.FirstName) $($_.LastName)"
+         New-ADUser -GivenName $($_.FirstName) -Surname $($_.LastName) `
+         -Name $name -SamAccountName $($_.SamAccountName) `
+         -UserPrincipalName "$($_.SamAccountName)@Suffix" `
+         -AccountPassword $secpass -Path "DC=,DC=" `
+         -Enabled:$true
+}
