@@ -1,9 +1,8 @@
-﻿cls
-Import-Csv C:\Users\rafael.carvalho\Desktop\Brasoftware\Users\ContasServico.csv |
+Import-Csv "FilePath"\ContasServico.csv |
 foreach {
          $OU = "$($_.Name)"
-         $name = "Contas de Servico"
-		 New-ADOrganizationalUnit -Name "$name" -Path "OU=Usuarios,OU=$OU,OU=PMS,DC=ADPMS,DC=local" `
+         $name = "Name"
+		 New-ADOrganizationalUnit -Name "$name" -Path "OU=$OU,DC=,DC=" `
          -Verbose
 
 }
