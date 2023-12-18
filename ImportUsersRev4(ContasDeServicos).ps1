@@ -6,7 +6,7 @@ foreach {
 		 $secpass = ConvertTo-SecureString -AsPlainText $($_.Password) -Force
          New-ADUser -GivenName $($_.FirstName) -Surname $($_.LastName) `
          -Name $name -SamAccountName "$($_.SamAccountName)" `
-         -UserPrincipalName "$($_.SamAccountName)@ADPMS.local" `
+         -UserPrincipalName "$($_.SamAccountName)@Suffix.local" `
          -AccountPassword $secpass -Path "DC=,DC=" `
          -Enabled:$true -Verbose -WhatIf
 
