@@ -1,4 +1,12 @@
-﻿# Verificar se os modulos do Exchange Online Management estao instalados
+# Para criar uma regra de transporte no Exchange que informe aos remetentes que o e-mail não é monitorado e que devem usar um novo endereço de e-mail, além de encaminhar a mensagem para o novo e-mail, você pode seguir os seguintes passos:
+# Preparar o arquivo CSV: Crie um arquivo CSV com duas colunas: a coluna com o endereço de e-mail antigo e a coluna com o novo endereço de e-mail.
+# Nome do arquivo email_forwarding.csv:
+# OldEmail,NewEmail
+# antigo@exemplo.com,novo@exemplo.com
+# outro@exemplo.com,novonovo@exemplo.com
+
+ 
+ # Verificar se os modulos do Exchange Online Management estao instalados
 $moduleName = "ExchangeOnlineManagement"
 if (-not (Get-Module -ListAvailable -Name $moduleName)) {
     Write-Host "Modulo $moduleName nao encontrado. Instalando..."
