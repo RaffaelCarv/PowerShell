@@ -1,4 +1,4 @@
-# Importa o módulo Active Directory
+# Importa o modulo Active Directory
 Import-Module ActiveDirectory
 
 # Caminho do arquivo CSV
@@ -8,26 +8,28 @@ $csvPath = "$home\desktop\Cross_Users_AD.csv"
 $attributeName = "CustomAttribute1"
 $attributeValue = "Cross-Tenant-Project"
 
-# Caminho do arquivo de log
-$logPath = "$home\desktop\AD_Update_Log.txt"
+# Obtem a data e hora atual para o nome do arquivo de log
+$currentDateTime = Get-Date -Format "yyyyMMdd_HHmmss"
+$logFileName = "AD_Update_Log_$currentDateTime.txt"
+$logPath = "$home\desktop\$logFileName"
 
-# Lê o arquivo CSV
+# Le o arquivo CSV
 $users = Import-Csv -Path $csvPath
 
-# Função para adicionar o atributo personalizado ao esquema do AD
+# Funcao para adicionar o atributo personalizado ao esquema do AD
 function Add-CustomAttribute {
     param (
         [string]$attributeName
     )
 
-    # Verifica se o atributo já existe
+    # Verifica se o atributo ja existe
     $existingAttribute = Get-ADObject -Filter { Name -eq $attributeName } -SearchBase (Get-ADRootDSE).SchemaNamingContext -SearchScope Base
 
     if (-not $existingAttribute) {
         # Comando para adicionar o atributo ao esquema do AD
-        Write-Output "Atributo '$attributeName' não encontrado no esquema. Adicionando o atributo..."
+        Write-Output "Atributo '$attributeName' nao encontrado no esquema. Adicionando o atributo..."
         
-        # Parâmetros do novo atributo
+        # Parametros do novo atributo
         $schemaAttrParams = @{
             Name           = $attributeName
             LdapDisplayName = $attributeName
@@ -40,14 +42,14 @@ function Add-CustomAttribute {
         New-ADObject -Type attributeSchema @schemaAttrParams
         Write-Output "Atributo '$attributeName' adicionado ao esquema."
     } else {
-        Write-Output "Atributo '$attributeName' já existe no esquema."
+        Write-Output "Atributo '$attributeName' ja existe no esquema."
     }
 }
 
-# Adiciona o atributo personalizado ao esquema se necessário
+# Adiciona o atributo personalizado ao esquema se necessario
 Add-CustomAttribute -attributeName $attributeName
 
-# Inicializa variáveis para logs
+# Inicializa variaveis para logs
 $successLog = @()
 $failureLog = @()
 $errorLog = @()
@@ -59,33 +61,33 @@ foreach ($user in $users) {
     # Atualiza o progresso
     $currentCount++
     $percentComplete = [math]::Round(($currentCount / $totalUsers) * 100)
-    Write-Progress -Activity "Atualizando atributos dos usuários" -Status "$percentComplete% completo" -PercentComplete ($currentCount / $totalUsers * 100)
+    Write-Progress -Activity "Atualizando atributos dos usuarios" -Status "$percentComplete% completo" -PercentComplete ($currentCount / $totalUsers * 100)
 
     try {
-        # Obtém o SamAccountName do usuário a partir do CSV
+        # Obtem o SamAccountName do usuario a partir do CSV
         $samAccountName = $user.SamAccountName
 
-        # Verifica se o usuário existe no AD
+        # Verifica se o usuario existe no AD
         $adUser = Get-ADUser -Filter {SamAccountName -eq $samAccountName} -Properties $attributeName
 
         if ($adUser) {
-            # Adiciona ou atualiza o atributo personalizado para cada usuário
+            # Adiciona ou atualiza o atributo personalizado para cada usuario
             Set-ADUser -Identity $adUser -Replace @{$attributeName = $attributeValue}
-            $successLog += "Atributo '$attributeName' atualizado para o usuário: $($adUser.SamAccountName)"
+            $successLog += "Atributo '$attributeName' atualizado para o usuario: $($adUser.SamAccountName)"
         } else {
-            $failureLog += "Usuário com SamAccountName '$samAccountName' não encontrado."
+            $failureLog += "Usuario com SamAccountName '$samAccountName' nao encontrado."
         }
     } catch {
-        $errorLog += "Erro ao processar usuário com SamAccountName '$samAccountName': $_"
+        $errorLog += "Erro ao processar usuario com SamAccountName '$samAccountName': $_"
     }
 }
 
 # Cria o arquivo de log
 $logContent = @(
-    "----- Usuários Atualizados com Sucesso -----",
+    "----- Usuarios Atualizados com Sucesso -----",
     $successLog,
     "",
-    "----- Usuários Não Encontrados -----",
+    "----- Usuarios Nao Encontrados -----",
     $failureLog,
     "",
     "----- Erros Durante o Processo -----",
@@ -94,4 +96,4 @@ $logContent = @(
 
 $logContent | Out-File -FilePath $logPath -Encoding UTF8
 
-Write-Output "Processo concluído. Verifique o arquivo de log em: $logPath"
+Write-Output "Processo concluido. Verifique o arquivo de log em: $logPath"
