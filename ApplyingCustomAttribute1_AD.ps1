@@ -9,7 +9,7 @@ $attributeName = "CustomAttribute1"
 $attributeValue = "Cross-Tenant-Project"
 
 # Obtem a data e hora atual para o nome do arquivo de log
-$currentDateTime = Get-Date -Format "yyyyMMdd_HHmmss"
+$currentDateTime = Get-Date -Format "ddMMyyyy_HHmmss"
 $logFileName = "AD_Update_Log_$currentDateTime.txt"
 $logPath = "$home\desktop\$logFileName"
 
