@@ -34,14 +34,6 @@ function Check-CustomAttribute {
     }
 }
 
-# Verifica se o atributo personalizado já existe no esquema
-$attributeExists = Check-CustomAttribute -attributeName $attributeName
-
-if (-not $attributeExists) {
-    Write-Output "Adicionando o atributo '$attributeName' ao esquema não é necessário, script será encerrado."
-    exit
-}
-
 # Inicializa variaveis para logs
 $successLog = @()
 $failureLog = @()
