@@ -1,7 +1,7 @@
 <#
     Script para atualizar o e-mail principal de usuários no Active Directory
     Autor: Rafael Carvalho
-    GitHub: https://github.com/RaffaelCarv/PowerShell
+    GitHub: https://github.com/RaffaelCarv/PowerShell/blob/dbebb7c781a3ac38565f94903559eb25b6d633ab/Update-ADUserPrimaryEmail.ps1
 
     Data de criacao: 30/01/2022
     Ultima atualizacao: 30/07/2024
