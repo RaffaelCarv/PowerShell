@@ -41,16 +41,17 @@ function Create-Log {
 
     # Salva o conteudo no arquivo de log com codificacao UTF-8
     [System.IO.File]::WriteAllText($logFilePath, $logContent, [System.Text.Encoding]::UTF8)
-    Write-Output "`n`n`n`n`n`n`n`n*** Log gerado: $logFilePath ***"
+    Write-Host "`n*** Log gerado: $logFilePath ***`n`n" -ForegroundColor Yellow
 }
 
-# Verifica se o modulo Microsoft.Graph esta instalado e importa-o uma unica vez
-if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
-    Write-Output "O modulo Microsoft.Graph nao esta instalado. Instalando agora..."
+# Verifica se o modulo Microsoft.Graph esta instalado
+$module = Get-Module -ListAvailable -Name Microsoft.Graph
+if (-not $module) {
+    Write-Host "O modulo Microsoft.Graph nao esta instalado. Instalando agora..." -ForegroundColor Yellow
     Install-Module -Name Microsoft.Graph -Scope AllUsers -Force
 }
 
-# Importa o modulo Microsoft.Graph uma unica vez
+# Importa o modulo Microsoft.Graph
 Import-Module Microsoft.Graph
 
 # Conecta-se ao Microsoft Graph API
@@ -77,33 +78,33 @@ if ($openFileDialog.ShowDialog() -eq "OK") {
                 $contador++
                 $percentual = [math]::Round(($contador / $totalUsuarios) * 100, 2)
                 $logEntry = "Atualizando UserPrincipalName para o usuario $($usuario.UserId)... $percentual% concluido"
-                Write-Output $logEntry
+                Write-Host $logEntry -ForegroundColor Blue
                 $logEntries += $logEntry
                 try {
                     # Verifica se o UserPrincipalName ja esta em uso
                     $existingUser = Get-MgUser -Filter "userPrincipalName eq '$($usuario.UserPrincipalName)'" -ErrorAction Stop
                     if ($existingUser) {
                         $logEntries += "Erro: UserPrincipalName $($usuario.UserPrincipalName) ja esta em uso."
-                        Write-Output "Erro: UserPrincipalName $($usuario.UserPrincipalName) ja esta em uso."
+                        Write-Host "Erro: UserPrincipalName $($usuario.UserPrincipalName) ja esta em uso." -ForegroundColor Red
                     } else {
                         Update-MgUser -UserId $usuario.UserId -UserPrincipalName $usuario.UserPrincipalName -ErrorAction Stop
                         $logEntries += "Sucesso: UserPrincipalName atualizado para $($usuario.UserPrincipalName)"
-                        Write-Output "Sucesso: UserPrincipalName atualizado para $($usuario.UserPrincipalName)"
+                        Write-Host "Sucesso: UserPrincipalName atualizado para $($usuario.UserPrincipalName)" -ForegroundColor Green
                     }
                 } catch {
                     $logEntries += "Erro: Falha ao atualizar UserPrincipalName para $($usuario.UserId) - $_"
-                    Write-Output "Erro: Falha ao atualizar UserPrincipalName para $($usuario.UserId) - $_"
+                    Write-Host "Erro: Falha ao atualizar UserPrincipalName para $($usuario.UserId) - $_" -ForegroundColor Red
                 }
-                Write-Output "`n"
+                Write-Host "`n"
             }
         } else {
             $errorMessage = "O arquivo CSV nao contem as colunas necessarias 'UserId' e 'UserPrincipalName'."
-            Write-Output $errorMessage
+            Write-Host $errorMessage -ForegroundColor Red
             $logEntries += $errorMessage
         }
     } else {
         $errorMessage = "O arquivo CSV nao foi encontrado no caminho especificado: $csvPath"
-        Write-Output $errorMessage
+        Write-Host $errorMessage -ForegroundColor Red
         $logEntries += $errorMessage
     }
 
@@ -111,6 +112,6 @@ if ($openFileDialog.ShowDialog() -eq "OK") {
     Create-Log -logContent ($logEntries -join "`n`n")
 } else {
     $errorMessage = "Nenhum arquivo CSV foi selecionado. Por favor, selecione um arquivo CSV valido para continuar."
-    Write-Output $errorMessage
+    Write-Host $errorMessage -ForegroundColor Red
     Create-Log -logContent $errorMessage
 }
