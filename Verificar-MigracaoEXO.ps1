@@ -22,12 +22,26 @@ function Verificar-StatusDoBatch {
     param ($batchId)
 
     $statusBatch = Get-MigrationBatch -Identity $batchId
-    $statusUsuarios = Get-MigrationUser -BatchId $batchId | Select-Object Identity, Status, PercentComplete
+
+    $statusUsuarios = Get-MigrationUser -BatchId $batchId | ForEach-Object {
+        $stats = Get-MigrationUserStatistics -Identity $_.Identity
+
+        [PSCustomObject]@{
+            Usuario                     = $_.Identity
+            Status                      = $stats.Status
+            Percentual                  = "$($stats.PercentComplete)%"
+            BytesTransferidos           = "$($stats.BytesTransferred)"
+            TamanhoEstimado             = "$($stats.EstimatedTotalTransferSize)"
+            ItensTransferidos           = $stats.ItemsTransferred
+            ItensEstimados              = $stats.EstimatedTotalTransferCount
+            UltimoSync                  = $stats.LastSyncedTime
+        }
+    }
 
     Write-Host "`nStatus geral do batch:" -ForegroundColor Cyan
     $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime
 
-    Write-Host "`nStatus dos usuarios no batch:" -ForegroundColor Cyan
+    Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
     $statusUsuarios | Format-Table -AutoSize
 
     $salvar = Read-Host "`nDeseja salvar essas informacoes em um arquivo txt no Desktop? (S/N)"
@@ -41,8 +55,8 @@ function Verificar-StatusDoBatch {
         $logContent += "-----------------------------------"
         $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime | Out-String)
 
-        $logContent += "`nStatus dos usuarios:"
-        $logContent += "------------------------"
+        $logContent += "`nStatus detalhado dos usuarios:"
+        $logContent += "-------------------------------"
         $logContent += ($statusUsuarios | Format-Table -AutoSize | Out-String)
 
         Set-Content -Path $path -Value $logContent
