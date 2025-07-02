@@ -1,21 +1,22 @@
 <#
     .SYNOPSIS
-        Script para analise de batches de migracao no Exchange Online.
-        Lista batches, permite escolher um batch, consultar status e erros.
+        Script para análise de batches de migração no Exchange Online.
+        Lista batches disponíveis, permite escolher um batch e consultar status e erros.
 
     .DESCRIPTION
-        Conecta ao Exchange Online, lista batches disponiveis.
-        Usuario escolhe batch.
-        Menu para verificar status, erros, mudar lote ou sair.
-        Logs sao gerados no Desktop (txt para status, csv para erros).
+        Conecta ao Exchange Online e lista os batches disponíveis.
+        O usuário escolhe o batch desejado.
+        Exibe um menu para verificar status, erros, mudar de lote ou sair.
+        Gera logs no Desktop (TXT para status, CSV para erros).
 
     .NOTES
         Autor: Rafael Carvalho
-        Ultima atualizacao: 30/06/2025
+        Data de criação: 30/06/2025
+        Última atualização: 01/07/2025
         Requisitos:
-          - PowerShell 5.1+
-          - Modulo ExchangeOnlineManagement instalado
-          - Permissoes adequadas para consultar batches e usuarios
+          - PowerShell 5.1 ou superior
+          - Módulo ExchangeOnlineManagement instalado
+          - Permissões adequadas para consultar batches e usuários
 #>
 
 function Verificar-StatusDoBatch {
