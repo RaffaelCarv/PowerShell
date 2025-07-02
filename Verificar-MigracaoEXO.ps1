@@ -26,23 +26,28 @@ function Verificar-StatusDoBatch {
     $statusUsuarios = Get-MigrationUser -BatchId $batchId | ForEach-Object {
         $stats = Get-MigrationUserStatistics -Identity $_.Identity
 
+        $percentual = if ($stats.PercentageComplete -ne $null) { $stats.PercentageComplete } else { 0 }
+
         [PSCustomObject]@{
-            Usuario                     = $_.Identity
-            Status                      = $stats.Status
-            Percentual                  = "$($stats.PercentComplete)%"
-            BytesTransferidos           = "$($stats.BytesTransferred)"
-            TamanhoEstimado             = "$($stats.EstimatedTotalTransferSize)"
-            ItensTransferidos           = $stats.ItemsTransferred
-            ItensEstimados              = $stats.EstimatedTotalTransferCount
-            UltimoSync                  = $stats.LastSyncedTime
+            Usuario             = $_.Identity
+            Status              = $stats.Status
+            Percentual          = $percentual  # valor numerico puro
+            BytesTransferidos   = "$($stats.BytesTransferred)"
+            TamanhoEstimado     = "$($stats.EstimatedTotalTransferSize)"
+            ItensTransferidos   = $stats.SyncedItemCount
+            ItensEstimados      = $stats.TotalItemsInSourceMailboxCount
+            UltimoSync          = $stats.LastUpdatedTime
         }
-    }
+    } | Sort-Object Percentual  # ordena crescente (padrão)
 
     Write-Host "`nStatus geral do batch:" -ForegroundColor Cyan
     $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime
 
     Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
-    $statusUsuarios | Format-Table -AutoSize
+    $statusUsuarios | Select-Object Usuario, Status,
+        @{Name="Percentual %"; Expression = { "$($_.Percentual)%" }},
+        BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados, UltimoSync |
+        Format-Table -AutoSize
 
     $salvar = Read-Host "`nDeseja salvar essas informacoes em um arquivo txt no Desktop? (S/N)"
     if ($salvar -match '^[sS]$') {
@@ -57,7 +62,10 @@ function Verificar-StatusDoBatch {
 
         $logContent += "`nStatus detalhado dos usuarios:"
         $logContent += "-------------------------------"
-        $logContent += ($statusUsuarios | Format-Table -AutoSize | Out-String)
+        $logContent += ($statusUsuarios | Select-Object Usuario, Status,
+            @{Name="Percentual %"; Expression = { "$($_.Percentual)%" }},
+            BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados, UltimoSync |
+            Format-Table -AutoSize | Out-String)
 
         Set-Content -Path $path -Value $logContent
         Write-Host "`nLog salvo em: $path" -ForegroundColor Green
