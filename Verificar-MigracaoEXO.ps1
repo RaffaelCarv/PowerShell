@@ -11,7 +11,7 @@
 
     .NOTES
         Autor: Rafael Carvalho
-        Data de criação: 30/06/2025
+        Data de criação: 15/03/2023
         Última atualização: 01/07/2025
         Requisitos:
           - PowerShell 5.1 ou superior
