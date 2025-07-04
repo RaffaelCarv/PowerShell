@@ -11,8 +11,8 @@
 
     .NOTES
         Autor: Rafael Carvalho
-        Data de criação: 15/03/2023
-        Última atualização: 01/07/2025
+        Data de criação: 30/06/2025
+        Última atualização: 04/07/2025
         Requisitos:
           - PowerShell 5.1 ou superior
           - Módulo ExchangeOnlineManagement instalado
@@ -30,16 +30,17 @@ function Verificar-StatusDoBatch {
         $percentual = if ($stats.PercentageComplete -ne $null) { $stats.PercentageComplete } else { 0 }
 
         [PSCustomObject]@{
-            Usuario             = $_.Identity
-            Status              = $stats.Status
-            Percentual          = $percentual  # valor numerico puro
-            BytesTransferidos   = "$($stats.BytesTransferred)"
-            TamanhoEstimado     = "$($stats.EstimatedTotalTransferSize)"
-            ItensTransferidos   = $stats.SyncedItemCount
-            ItensEstimados      = $stats.TotalItemsInSourceMailboxCount
-            UltimoSync          = $stats.LastUpdatedTime
+            Usuario              = $_.Identity
+            Status               = $stats.StatusDetail
+            Percentual           = $percentual                           # valor numérico puro
+            BytesTransferidos    = "$($stats.BytesTransferred)"
+            TamanhoEstimado      = "$($stats.EstimatedTotalTransferSize)"
+            ItensTransferidos    = $stats.SyncedItemCount
+            ItensEstimados       = $stats.TotalItemsInSourceMailboxCount
+            TaxaTransferencia    = $stats.CurrentBytesTransferredPerMinute  # bytes/min cru
+            UltimoSync           = $stats.LastUpdatedTime
         }
-    } | Sort-Object Percentual  # ordena crescente (padrão)
+    } | Sort-Object Percentual      # crescente (padrão)
 
     Write-Host "`nStatus geral do batch:" -ForegroundColor Cyan
     $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime
@@ -47,16 +48,17 @@ function Verificar-StatusDoBatch {
     Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
     $statusUsuarios | Select-Object Usuario, Status,
         @{Name="Percentual %"; Expression = { "$($_.Percentual)%" }},
+        @{Name="Bytes/min";    Expression = { $_.TaxaTransferencia }},
         BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados, UltimoSync |
         Format-Table -AutoSize
 
     $salvar = Read-Host "`nDeseja salvar essas informacoes em um arquivo txt no Desktop? (S/N)"
     if ($salvar -match '^[sS]$') {
         $timestamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
-        $desktop = [Environment]::GetFolderPath("Desktop")
-        $path = "$desktop\Status_Migracao_$batchId`_$timestamp.txt"
+        $desktop   = [Environment]::GetFolderPath("Desktop")
+        $path      = "$desktop\Status_Migracao_$batchId`_$timestamp.txt"
 
-        $logContent = @()
+        $logContent  = @()
         $logContent += "Status geral do batch '$batchId'"
         $logContent += "-----------------------------------"
         $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime | Out-String)
@@ -65,6 +67,7 @@ function Verificar-StatusDoBatch {
         $logContent += "-------------------------------"
         $logContent += ($statusUsuarios | Select-Object Usuario, Status,
             @{Name="Percentual %"; Expression = { "$($_.Percentual)%" }},
+            @{Name="Bytes/min";    Expression = { $_.TaxaTransferencia }},
             BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados, UltimoSync |
             Format-Table -AutoSize | Out-String)
 
