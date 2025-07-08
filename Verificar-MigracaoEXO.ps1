@@ -30,26 +30,29 @@ function Verificar-StatusDoBatch {
         $percentual = if ($stats.PercentageComplete -ne $null) { $stats.PercentageComplete } else { 0 }
 
         [PSCustomObject]@{
-            Usuario              = $_.Identity
-            Status               = $stats.StatusDetail
-            Percentual           = $percentual                           # valor numérico puro
-            BytesTransferidos    = "$($stats.BytesTransferred)"
-            TamanhoEstimado      = "$($stats.EstimatedTotalTransferSize)"
-            ItensTransferidos    = $stats.SyncedItemCount
-            ItensEstimados       = $stats.TotalItemsInSourceMailboxCount
-            TaxaTransferencia    = $stats.CurrentBytesTransferredPerMinute  # bytes/min cru
-            UltimoSync           = $stats.LastUpdatedTime
+            Usuario               = $_.Identity
+            Status                = $stats.StatusDetail
+            Percentual            = $percentual
+            BytesTransferidos     = "$($stats.BytesTransferred)"
+            TamanhoEstimado       = "$($stats.EstimatedTotalTransferSize)"
+            ItensTransferidos     = $stats.SyncedItemCount
+            ItensEstimados        = $stats.TotalItemsInSourceMailboxCount
+            TaxaTransferencia     = $stats.CurrentBytesTransferredPerMinute
+            ConclusaoSyncInicial  = $stats.InitialSeedingCompletedTime
+            UltimoSync            = $stats.LastUpdatedTime
         }
-    } | Sort-Object Percentual      # crescente (padrão)
+    } | Sort-Object Percentual
 
     Write-Host "`nStatus geral do batch:" -ForegroundColor Cyan
     $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime
 
     Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
     $statusUsuarios | Select-Object Usuario, Status,
-        @{Name="Percentual %"; Expression = { "$($_.Percentual)%" }},
-        @{Name="Bytes/min";    Expression = { $_.TaxaTransferencia }},
-        BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados, UltimoSync |
+        @{Name="Percentual %";         Expression = { "$($_.Percentual)%" }},
+        @{Name="Bytes/min";            Expression = { $_.TaxaTransferencia }},
+        BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados,
+        @{Name="ConclusaoSyncInicial"; Expression = { $_.ConclusaoSyncInicial }},
+        UltimoSync |
         Format-Table -AutoSize
 
     $salvar = Read-Host "`nDeseja salvar essas informacoes em um arquivo txt no Desktop? (S/N)"
@@ -66,9 +69,11 @@ function Verificar-StatusDoBatch {
         $logContent += "`nStatus detalhado dos usuarios:"
         $logContent += "-------------------------------"
         $logContent += ($statusUsuarios | Select-Object Usuario, Status,
-            @{Name="Percentual %"; Expression = { "$($_.Percentual)%" }},
-            @{Name="Bytes/min";    Expression = { $_.TaxaTransferencia }},
-            BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados, UltimoSync |
+            @{Name="Percentual %";         Expression = { "$($_.Percentual)%" }},
+            @{Name="Bytes/min";            Expression = { $_.TaxaTransferencia }},
+            BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados,
+            @{Name="ConclusaoSyncInicial"; Expression = { $_.ConclusaoSyncInicial }},
+            UltimoSync |
             Format-Table -AutoSize | Out-String)
 
         Set-Content -Path $path -Value $logContent
@@ -171,8 +176,10 @@ do {
 # Menu principal
 do {
     Write-Host "`n========= MENU PRINCIPAL =========" -ForegroundColor Cyan
-    Write-Host "Batch atual: $batchId" -ForegroundColor Yellow
-    Write-Host "1. Verificar status completo do batch"
+    Write-Host ""
+	Write-Host "Batch atual: $batchId" -ForegroundColor Yellow
+    Write-Host ""
+	Write-Host "1. Verificar status completo do batch"
     Write-Host "2. Verificar erros detalhados dos usuarios com falha"
     Write-Host "3. Mudar lote"
     Write-Host "4. Sair"
