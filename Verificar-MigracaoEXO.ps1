@@ -31,7 +31,7 @@ function Verificar-StatusDoBatch {
 
         [PSCustomObject]@{
             Usuario               = $_.Identity
-            Status                = $stats.StatusDetail
+            Status                = $stats.Status
             Percentual            = $percentual
             BytesTransferidos     = "$($stats.BytesTransferred)"
             TamanhoEstimado       = "$($stats.EstimatedTotalTransferSize)"
