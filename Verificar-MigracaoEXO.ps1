@@ -6,17 +6,17 @@
     .DESCRIPTION
         Conecta ao Exchange Online e lista os batches disponíveis.
         O usuário escolhe o batch desejado.
-        Exibe um menu para verificar status, erros, mudar de lote ou sair.
+        Exibe um menu para verificar status, erros, concluir lote, mudar de lote ou sair.
         Gera logs no Desktop (TXT para status, CSV para erros).
 
     .NOTES
         Autor: Rafael Carvalho
         Data de criação: 30/06/2025
-        Última atualização: 04/07/2025
+        Última atualização: 10/07/2025
         Requisitos:
           - PowerShell 5.1 ou superior
           - Módulo ExchangeOnlineManagement instalado
-          - Permissões adequadas para consultar batches e usuários
+          - Permissões adequadas para consultar e concluir batches de migração
 #>
 
 function Verificar-StatusDoBatch {
@@ -44,7 +44,7 @@ function Verificar-StatusDoBatch {
     } | Sort-Object Percentual
 
     Write-Host "`nStatus geral do batch:" -ForegroundColor Cyan
-    $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime
+    $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfterUTC
 
     Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
     $statusUsuarios | Select-Object Usuario, Status,
@@ -64,7 +64,7 @@ function Verificar-StatusDoBatch {
         $logContent  = @()
         $logContent += "Status geral do batch '$batchId'"
         $logContent += "-----------------------------------"
-        $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime | Out-String)
+        $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfterUTC | Out-String)
 
         $logContent += "`nStatus detalhado dos usuarios:"
         $logContent += "-------------------------------"
@@ -123,6 +123,23 @@ function Verificar-ErrosDoBatch {
     Write-Host "`nLog de erros exportado para: $logPath" -ForegroundColor Green
 }
 
+function Concluir-Lote {
+    param ($batchId)
+
+    Write-Host "`nATENCAO: Voce esta prestes a concluir o batch '$batchId'." -ForegroundColor Yellow
+    $confirmar = Read-Host "Deseja realmente concluir o batch? (S/N)"
+    if ($confirmar -match '^[sS]$') {
+        try {
+            Complete-MigrationBatch -Identity $batchId -Confirm:$false -ErrorAction Stop
+            Write-Host "Batch '$batchId' concluido com sucesso!" -ForegroundColor Green
+        } catch {
+            Write-Host "Erro ao concluir o batch: $_" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "Conclusao cancelada pelo usuario." -ForegroundColor DarkGray
+    }
+}
+
 function BatchExiste {
     param (
         [string]$nomeBatch,
@@ -138,7 +155,6 @@ function BatchExiste {
 }
 
 # Inicio do script
-
 Write-Host "`nConectando ao Exchange Online..." -ForegroundColor Cyan
 try {
     Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
@@ -177,13 +193,14 @@ do {
 do {
     Write-Host "`n========= MENU PRINCIPAL =========" -ForegroundColor Cyan
     Write-Host ""
-	Write-Host "Batch atual: $batchId" -ForegroundColor Yellow
+    Write-Host "Batch atual: $batchId" -ForegroundColor Yellow
     Write-Host ""
-	Write-Host "1. Verificar status completo do batch"
+    Write-Host "1. Verificar status completo do batch"
     Write-Host "2. Verificar erros detalhados dos usuarios com falha"
     Write-Host "3. Mudar lote"
-    Write-Host "4. Sair"
-    $opcao = Read-Host "`nEscolha uma opcao (1-4)"
+    Write-Host "4. Concluir lote"
+    Write-Host "5. Sair"
+    $opcao = Read-Host "`nEscolha uma opcao (1-5)"
 
     switch ($opcao) {
         "1" {
@@ -205,6 +222,9 @@ do {
             Write-Host "`nBatch alterado para: $batchId" -ForegroundColor Green
         }
         "4" {
+            Concluir-Lote -batchId $batchId
+        }
+        "5" {
             Write-Host "`nEncerrando script..." -ForegroundColor Green
             Disconnect-ExchangeOnline -Confirm:$false
         }
@@ -212,4 +232,4 @@ do {
             Write-Host "Opcao invalida. Tente novamente." -ForegroundColor Red
         }
     }
-} while ($opcao -ne "4")
+} while ($opcao -ne "5")
