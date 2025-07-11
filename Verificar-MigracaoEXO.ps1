@@ -24,7 +24,8 @@ function Verificar-StatusDoBatch {
 
     $statusBatch = Get-MigrationBatch -Identity $batchId
 
-    $statusUsuarios = Get-MigrationUser -BatchId $batchId | ForEach-Object {
+    $usuarios = Get-MigrationUser -BatchId $batchId
+    $statusUsuarios = $usuarios | ForEach-Object {
         $stats = Get-MigrationUserStatistics -Identity $_.Identity
 
         $percentual = if ($stats.PercentageComplete -ne $null) { $stats.PercentageComplete } else { 0 }
@@ -44,7 +45,7 @@ function Verificar-StatusDoBatch {
     } | Sort-Object Percentual
 
     Write-Host "`nStatus geral do batch:" -ForegroundColor Cyan
-    $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfterUTC
+    $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfter
 
     Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
     $statusUsuarios | Select-Object Usuario, Status,
@@ -55,6 +56,24 @@ function Verificar-StatusDoBatch {
         UltimoSync |
         Format-Table -AutoSize
 
+    # Verificar se todos os usuarios estao com falha
+    if ($statusUsuarios.Count -gt 0 -and ($statusUsuarios | Where-Object { $_.Status -ne 'Failed' }).Count -eq 0) {
+        Write-Host "`nTodos os usuarios estao com falha." -ForegroundColor Red
+        $reiniciar = Read-Host "Deseja reiniciar todos agora? (S/N)"
+        if ($reiniciar -match '^[sS]$') {
+            foreach ($u in $usuarios) {
+                try {
+                    Resume-MigrationUser -Identity $u.Identity -ErrorAction Stop
+                    Write-Host "Usuario $($u.Identity) reiniciado com sucesso." -ForegroundColor Green
+                } catch {
+                    Write-Host "Erro ao reiniciar o usuario $($u.Identity): $_" -ForegroundColor Red
+                }
+            }
+        } else {
+            Write-Host "Nenhum usuario foi reiniciado." -ForegroundColor DarkGray
+        }
+    }
+
     $salvar = Read-Host "`nDeseja salvar essas informacoes em um arquivo txt no Desktop? (S/N)"
     if ($salvar -match '^[sS]$') {
         $timestamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
@@ -64,7 +83,7 @@ function Verificar-StatusDoBatch {
         $logContent  = @()
         $logContent += "Status geral do batch '$batchId'"
         $logContent += "-----------------------------------"
-        $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfterUTC | Out-String)
+        $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfter | Out-String)
 
         $logContent += "`nStatus detalhado dos usuarios:"
         $logContent += "-------------------------------"
@@ -119,8 +138,34 @@ function Verificar-ErrosDoBatch {
         }
     }
 
-    $logData | Export-Csv -Path $logPath -NoTypeInformation
-    Write-Host "`nLog de erros exportado para: $logPath" -ForegroundColor Green
+    $salvar = Read-Host "`nDeseja salvar o log de erros em CSV na area de trabalho? (S/N)"
+    if ($salvar -match '^[sS]$') {
+        $logData | Export-Csv -Path $logPath -NoTypeInformation
+        Write-Host "`nLog de erros exportado para: $logPath" -ForegroundColor Green
+    } else {
+        Write-Host "`nLog nao gerado." -ForegroundColor DarkGray
+    }
+
+    $resumir = Read-Host "`nDeseja reiniciar os usuarios com falha? (S/N)"
+    if ($resumir -match '^[sS]$') {
+        foreach ($user in $failedUsers) {
+            try {
+                $moveRequest = Get-MoveRequest -Identity $user.Identity -ErrorAction SilentlyContinue
+                if ($moveRequest) {
+                    Resume-MoveRequest -Identity $user.Identity -ErrorAction Stop
+                    Write-Host "Usuario $($user.Identity) reiniciado com sucesso via Resume-MoveRequest." -ForegroundColor Green
+                } else {
+                    Start-MigrationUser -Identity $user.Identity -ErrorAction Stop
+                    Write-Host "Usuario $($user.Identity) iniciado via Start-MigrationUser." -ForegroundColor Green
+                }
+            }
+            catch {
+                Write-Host "Erro ao reiniciar o usuario $($user.Identity): $_" -ForegroundColor Red
+            }
+        }
+    } else {
+        Write-Host "`nNenhum usuario foi reiniciado." -ForegroundColor DarkGray
+    }
 }
 
 function Concluir-Lote {
