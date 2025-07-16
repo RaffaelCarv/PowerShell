@@ -25,12 +25,22 @@ function Verificar-StatusDoBatch {
     $statusBatch = Get-MigrationBatch -Identity $batchId
 
     $usuarios = Get-MigrationUser -BatchId $batchId
-    $statusUsuarios = $usuarios | ForEach-Object {
-        $stats = Get-MigrationUserStatistics -Identity $_.Identity
+    $total = $usuarios.Count
+    $contador = 0
+    $statusUsuarios = @()
 
+    $usuarios | ForEach-Object {
+        $contador++
+        $percentualProgresso = [math]::Round(($contador / $total) * 100)
+
+        Write-Progress -Activity "Consultando usuarios no batch '$batchId'" `
+                       -Status "$contador de $total processados..." `
+                       -PercentComplete $percentualProgresso
+
+        $stats = Get-MigrationUserStatistics -Identity $_.Identity
         $percentual = if ($stats.PercentageComplete -ne $null) { $stats.PercentageComplete } else { 0 }
 
-        [PSCustomObject]@{
+        $statusUsuarios += [PSCustomObject]@{
             Usuario               = $_.Identity
             Status                = $stats.Status
             Percentual            = $percentual
@@ -42,10 +52,12 @@ function Verificar-StatusDoBatch {
             ConclusaoSyncInicial  = $stats.InitialSeedingCompletedTime
             UltimoSync            = $stats.LastUpdatedTime
         }
-    } | Sort-Object Percentual
+    }
+
+    $statusUsuarios = $statusUsuarios | Sort-Object Percentual
 
     Write-Host "`nStatus geral do batch:" -ForegroundColor Cyan
-    $statusBatch | Format-List Identity, Status, TotalCount, ActiveCount, SyncedCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfter
+    $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfterUTC
 
     Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
     $statusUsuarios | Select-Object Usuario, Status,
@@ -56,24 +68,6 @@ function Verificar-StatusDoBatch {
         UltimoSync |
         Format-Table -AutoSize
 
-    # Verificar se todos os usuarios estao com falha
-    if ($statusUsuarios.Count -gt 0 -and ($statusUsuarios | Where-Object { $_.Status -ne 'Failed' }).Count -eq 0) {
-        Write-Host "`nTodos os usuarios estao com falha." -ForegroundColor Red
-        $reiniciar = Read-Host "Deseja reiniciar todos agora? (S/N)"
-        if ($reiniciar -match '^[sS]$') {
-            foreach ($u in $usuarios) {
-                try {
-                    Resume-MigrationUser -Identity $u.Identity -ErrorAction Stop
-                    Write-Host "Usuario $($u.Identity) reiniciado com sucesso." -ForegroundColor Green
-                } catch {
-                    Write-Host "Erro ao reiniciar o usuario $($u.Identity): $_" -ForegroundColor Red
-                }
-            }
-        } else {
-            Write-Host "Nenhum usuario foi reiniciado." -ForegroundColor DarkGray
-        }
-    }
-
     $salvar = Read-Host "`nDeseja salvar essas informacoes em um arquivo txt no Desktop? (S/N)"
     if ($salvar -match '^[sS]$') {
         $timestamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
@@ -83,7 +77,7 @@ function Verificar-StatusDoBatch {
         $logContent  = @()
         $logContent += "Status geral do batch '$batchId'"
         $logContent += "-----------------------------------"
-        $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfter | Out-String)
+        $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfterUTC | Out-String)
 
         $logContent += "`nStatus detalhado dos usuarios:"
         $logContent += "-------------------------------"
