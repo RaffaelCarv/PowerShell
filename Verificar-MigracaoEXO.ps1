@@ -12,7 +12,7 @@
     .NOTES
         Autor: Rafael Carvalho
         Data de criação: 30/06/2025
-        Última atualização: 10/07/2025
+        Última atualização: 17/07/2025
         Requisitos:
           - PowerShell 5.1 ou superior
           - Módulo ExchangeOnlineManagement instalado
@@ -45,7 +45,7 @@ function Verificar-StatusDoBatch {
     } | Sort-Object Percentual
 
     Write-Host "`nStatus geral do batch:" -ForegroundColor Cyan
-    $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfter
+    $statusBatch | Format-List Identity, Status, TotalCount, ActiveCount, SyncedCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfter
 
     Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
     $statusUsuarios | Select-Object Usuario, Status,
