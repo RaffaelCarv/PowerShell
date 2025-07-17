@@ -57,7 +57,7 @@ function Verificar-StatusDoBatch {
     $statusUsuarios = $statusUsuarios | Sort-Object Percentual
 
     Write-Host "`nStatus geral do batch:" -ForegroundColor Cyan
-    $statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfterUTC
+    $statusBatch | Format-List Identity, Status, TotalCount, ActiveCount, SyncedCount, FailedCount, FinalizedCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfter
 
     Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
     $statusUsuarios | Select-Object Usuario, Status,
@@ -77,7 +77,7 @@ function Verificar-StatusDoBatch {
         $logContent  = @()
         $logContent += "Status geral do batch '$batchId'"
         $logContent += "-----------------------------------"
-        $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfterUTC | Out-String)
+        $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, ActiveCount, SyncedCount, FailedCount, FinalizedCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfter | Out-String)
 
         $logContent += "`nStatus detalhado dos usuarios:"
         $logContent += "-------------------------------"
@@ -89,8 +89,8 @@ function Verificar-StatusDoBatch {
             UltimoSync |
             Format-Table -AutoSize | Out-String)
 
-        Set-Content -Path $path -Value $logContent
-        Write-Host "`nLog salvo em: $path" -ForegroundColor Green
+        $logString = $logContent -join "`r`n"
+        Create-Log -FileNamePrefix "Status_Migracao_$batchId" -Content $logString
     } else {
         Write-Host "`nLog nao gerado." -ForegroundColor DarkGray
     }
@@ -134,8 +134,13 @@ function Verificar-ErrosDoBatch {
 
     $salvar = Read-Host "`nDeseja salvar o log de erros em CSV na area de trabalho? (S/N)"
     if ($salvar -match '^[sS]$') {
-        $logData | Export-Csv -Path $logPath -NoTypeInformation
+        $logData | Export-Csv -Path $logPath -NoTypeInformation -Encoding UTF8
         Write-Host "`nLog de erros exportado para: $logPath" -ForegroundColor Green
+
+        $visualizar = Read-Host "`nDeseja abrir a visualizacao em tabela (Out-GridView)? (S/N)"
+        if ($visualizar -match '^[sS]$') {
+            $logData | Out-GridView -Title "Falhas de Migracao - Batch $batchId"
+        }
     } else {
         Write-Host "`nLog nao gerado." -ForegroundColor DarkGray
     }
@@ -176,6 +181,31 @@ function Concluir-Lote {
         }
     } else {
         Write-Host "Conclusao cancelada pelo usuario." -ForegroundColor DarkGray
+    }
+}
+
+function Create-Log {
+    param (
+        [string]$FileNamePrefix,
+        [string]$Content
+    )
+
+    $timestamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
+    $desktopPath = [System.Environment]::GetFolderPath("Desktop")
+    $fileName = "${FileNamePrefix}_$timestamp.txt"
+    $filePath = Join-Path $desktopPath $fileName
+
+    [System.IO.File]::WriteAllText($filePath, $Content, [System.Text.Encoding]::UTF8)
+    Write-Host "`nLog salvo em: $filePath" -ForegroundColor Green
+
+    $abrirLog = Read-Host "Deseja visualizar o log agora em modo interativo? (S/N)"
+    if ($abrirLog -match '^(S|s)$') {
+        if (Get-Command Out-GridView -ErrorAction SilentlyContinue) {
+            Get-Content -Path $filePath | Out-GridView -Title "Log de Execucao"
+        } else {
+            Write-Host "Out-GridView nao esta disponivel. Abrindo no bloco de notas..." -ForegroundColor Yellow
+            Start-Process notepad.exe "`"$filePath`""
+        }
     }
 }
 
