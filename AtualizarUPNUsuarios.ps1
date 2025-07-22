@@ -23,11 +23,17 @@ $atributosPais = @{
     countrycode = 76
 }
 
-# Atualiza atributos de localizacao
 Write-Host "Atualizando atributos de localizacao padroes em todos os usuarios..." -ForegroundColor Cyan
+
+# Atualiza todos os usuarios com os atributos de pais padrao
 Get-ADUser -Filter * -Properties c | ForEach-Object {
-    Set-ADUser $_ -Replace $atributosPais
+    try {
+        Set-ADUser $_ -Replace $atributosPais -ErrorAction Stop
+    } catch {
+        Write-Host "Erro ao atualizar atributos de $_ : $_" -ForegroundColor Red
+    }
 }
+
 Write-Host "Atributos atualizados com sucesso.`n" -ForegroundColor Green
 
 # Prompt: simulacao
@@ -46,11 +52,16 @@ if ($usarOU -match '^[sS]') {
 $dominioAtual = Read-Host "Informe o dominio atual do UPN (ex: contoso.local)"
 $novoDominio  = Read-Host "Informe o novo dominio desejado (ex: contoso.com)"
 
-# Busca usuarios
+# Busca usuarios com base na presenca do SearchBase
 if ($searchBase) {
-    $usuarios = Get-ADUser -Filter { UserPrincipalName -like "*@$dominioAtual" } -SearchBase $searchBase -Properties UserPrincipalName
+    $usuarios = Get-ADUser -Filter "UserPrincipalName -like '*@$dominioAtual'" -SearchBase $searchBase -Properties UserPrincipalName, SamAccountName
 } else {
-    $usuarios = Get-ADUser -Filter { UserPrincipalName -like "*@$dominioAtual" } -Properties UserPrincipalName
+    $usuarios = Get-ADUser -Filter "UserPrincipalName -like '*@$dominioAtual'" -Properties UserPrincipalName, SamAccountName
+}
+
+if ($usuarios.Count -eq 0) {
+    Write-Host "Nenhum usuario encontrado com o sufixo $dominioAtual." -ForegroundColor Yellow
+    return
 }
 
 # Lista para log
@@ -63,9 +74,10 @@ foreach ($usuario in $usuarios) {
 
     if ($usarWhatIf) {
         Write-Host "Simulando: $($usuario.UserPrincipalName) -> $UPNnovo" -ForegroundColor Cyan
+        $logAlteracoes += "Simulacao: $($usuario.SamAccountName): $($usuario.UserPrincipalName) => $UPNnovo"
     } else {
         try {
-            Set-ADUser -Identity $usuario -UserPrincipalName $UPNnovo -ErrorAction Stop
+            Set-ADUser -Identity $usuario.DistinguishedName -UserPrincipalName $UPNnovo -ErrorAction Stop
             $logAlteracoes += "$($usuario.SamAccountName): $($usuario.UserPrincipalName) => $UPNnovo"
             Write-Host "Alterado: $($usuario.UserPrincipalName) -> $UPNnovo" -ForegroundColor Green
         } catch {
@@ -75,14 +87,16 @@ foreach ($usuario in $usuarios) {
     }
 }
 
-# Gera log se houve alteracoes reais
-if (-not $usarWhatIf -and $logAlteracoes.Count -gt 0) {
-    $dataLog = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-    $caminhoDesktop = [Environment]::GetFolderPath("Desktop")
-    $arquivoLog = "$caminhoDesktop\Alteracoes_UPN_$dataLog.txt"
+# Gera log
+$dataLog = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+$caminhoDesktop = [Environment]::GetFolderPath("Desktop")
+$arquivoLog = "$caminhoDesktop\Alteracoes_UPN_$dataLog.txt"
 
+if ($logAlteracoes.Count -gt 0) {
     [System.IO.File]::WriteAllLines($arquivoLog, $logAlteracoes, [System.Text.Encoding]::UTF8)
     Write-Host "`nLog salvo em: $arquivoLog" -ForegroundColor Yellow
+} else {
+    Write-Host "`nNenhuma alteracao realizada, nenhum log gerado." -ForegroundColor Yellow
 }
 
 Write-Host "`nProcessamento concluido." -ForegroundColor Cyan
