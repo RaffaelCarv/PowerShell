@@ -5,7 +5,7 @@
         aplicar restricao por OU e registrar alteracoes em log.
 
     .CRIACAO
-        21 de julho de 2022
+        21 de setembro de 2022
 
     .ULTIMA ATUALIZACAO
         21 de julho de 2025
