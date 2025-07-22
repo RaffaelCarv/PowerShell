@@ -1,22 +1,40 @@
 <#
-    .SYNOPSIS
-        Script para análise de batches de migração no Exchange Online.
-        Lista batches disponíveis, permite escolher um batch e consultar status e erros.
+    .TITULO
+        Gerenciamento de Lotes de Migracao no Exchange Online
 
-    .DESCRIPTION
-        Conecta ao Exchange Online e lista os batches disponíveis.
-        O usuário escolhe o batch desejado.
-        Exibe um menu para verificar status, erros, concluir lote, mudar de lote ou sair.
-        Gera logs no Desktop (TXT para status, CSV para erros).
+    .DESCRICAO
+        Script interativo para criacao, monitoramento e gerenciamento de batches de migracao
+        no Exchange Online utilizando o cmdlet New-MigrationBatch.
 
-    .NOTES
-        Autor: Rafael Carvalho
-        Data de criação: 30/06/2025
-        Última atualização: 17/07/2025
-        Requisitos:
-          - PowerShell 5.1 ou superior
-          - Módulo ExchangeOnlineManagement instalado
-          - Permissões adequadas para consultar e concluir batches de migração
+        - Utiliza o prefixo padronizado "MXOPS" (Migration Operations) seguido por identificador aleatorio.
+        - Le os dados de migracao a partir do arquivo "MigrationUsersList.csv".
+        - Exibe informacoes de status, erros por usuario, retoma lotes pausados e conclui migracoes.
+        - Gera log detalhado sem acentuacao no mesmo diretorio do script, codificado em UTF-8.
+
+    .REQUISITOS
+        - PowerShell 5.1 ou superior
+        - Modulo ExchangeOnlineManagement instalado
+        - Permissoes administrativas no Exchange Online
+        - Conexao ativa via Connect-ExchangeOnline
+        - Arquivo CSV com usuarios: "MigrationUsersList.csv"
+
+    .OBSERVACOES
+        - Logs sao gerados no mesmo diretorio do script com data e hora
+        - Script valida se o CSV contem usuarios antes de iniciar
+        - Em caso de erro critico (ex: CSV vazio), a execucao e interrompida
+        - Script com suporte a barra de progresso e mensagens coloridas no console
+
+    .CRIADO_POR
+        Rafael Carvalho
+
+    .GITHUB
+        https://github.com/RaffaelCarv
+
+    .CRIACAO
+        21/07/2022
+
+    .ULTIMA_ATUALIZACAO
+        25/06/2025
 #>
 
 function Verificar-StatusDoBatch {
