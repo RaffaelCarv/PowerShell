@@ -34,7 +34,7 @@
         21/07/2022
 
     .ULTIMA_ATUALIZACAO
-        25/06/2025
+        29/07/2025
 #>
 
 function Verificar-StatusDoBatch {
@@ -74,8 +74,12 @@ function Verificar-StatusDoBatch {
 
     $statusUsuarios = $statusUsuarios | Sort-Object Percentual
 
-    Write-Host "`nStatus geral do batch:" -ForegroundColor Cyan
-    $statusBatch | Format-List Identity, Status, TotalCount, ActiveCount, SyncedCount, FailedCount, FinalizedCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfter
+    # Calcula percentual de conclusao do batch
+    $percentualConcluido = if ($statusBatch.TotalCount -gt 0) {
+        [math]::Round(($statusBatch.SyncedCount / $statusBatch.TotalCount) * 100, 2)
+    } else {
+        0
+    }
 
     Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
     $statusUsuarios | Select-Object Usuario, Status,
@@ -86,6 +90,21 @@ function Verificar-StatusDoBatch {
         UltimoSync |
         Format-Table -AutoSize
 
+    Write-Host "`nResumo do batch:" -ForegroundColor Cyan
+    $statusResumo = [PSCustomObject]@{
+        Identity             = $statusBatch.Identity
+        'Percentual Concluido' = "$percentualConcluido%"
+        Status               = $statusBatch.Status.ToString()
+        TotalCount           = $statusBatch.TotalCount
+        ActiveCount          = $statusBatch.ActiveCount
+        SyncedCount          = $statusBatch.SyncedCount
+        FailedCount          = $statusBatch.FailedCount
+        FinalizedCount       = $statusBatch.FinalizedCount
+        CreationDateTime     = $statusBatch.CreationDateTime
+        CompleteAfter        = $statusBatch.CompleteAfter
+    }
+    $statusResumo | Format-List
+
     $salvar = Read-Host "`nDeseja salvar essas informacoes em um arquivo txt no Desktop? (S/N)"
     if ($salvar -match '^[sS]$') {
         $timestamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
@@ -93,9 +112,9 @@ function Verificar-StatusDoBatch {
         $path      = "$desktop\Status_Migracao_$batchId`_$timestamp.txt"
 
         $logContent  = @()
-        $logContent += "Status geral do batch '$batchId'"
+        $logContent += "Resumo do batch '$batchId'"
         $logContent += "-----------------------------------"
-        $logContent += ($statusBatch | Format-List Identity, Status, TotalCount, ActiveCount, SyncedCount, FailedCount, FinalizedCount, InitialSyncDuration, CreationDateTime, LastSyncedTime, CompleteAfter | Out-String)
+        $logContent += ($statusResumo | Format-List | Out-String)
 
         $logContent += "`nStatus detalhado dos usuarios:"
         $logContent += "-------------------------------"
