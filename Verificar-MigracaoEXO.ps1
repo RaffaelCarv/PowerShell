@@ -76,7 +76,7 @@ function Verificar-StatusDoBatch {
 
     # Calcula percentual de conclusao do batch
     $percentualConcluido = if ($statusBatch.TotalCount -gt 0) {
-        [math]::Round(($statusBatch.SyncedCount / $statusBatch.TotalCount) * 100, 1)
+        [math]::Round(($statusBatch.SyncedCount / $statusBatch.TotalCount) * 100, 0)
     } else {
         0
     }
