@@ -34,8 +34,22 @@
         21/07/2022
 
     .ULTIMA_ATUALIZACAO
-        29/07/2025
+        11/08/2025
+
 #>
+
+# Para evitar erro de Execution Policy, execute antes (somente na sessão atual):
+# Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+
+# Ajusta o buffer para criar barra de rolagem horizontal se necessario
+#$host.UI.RawUI.BufferSize = New-Object Management.Automation.Host.Size (500, $host.UI.RawUI.BufferSize.Height)
+
+# Verifica se o modulo ExchangeOnlineManagement esta instalado, caso contrario instala
+if (-not (Get-Module -ListAvailable -Name ExchangeOnlineManagement)) {
+    Write-Host "Modulo ExchangeOnlineManagement nao encontrado. Instalando..." -ForegroundColor Yellow
+    Install-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
+}
+Import-Module ExchangeOnlineManagement
 
 function Verificar-StatusDoBatch {
     param ($batchId)
@@ -74,11 +88,24 @@ function Verificar-StatusDoBatch {
 
     $statusUsuarios = $statusUsuarios | Sort-Object Percentual
 
-    # Calcula percentual de conclusao do batch
-    $percentualConcluido = if ($statusBatch.TotalCount -gt 0) {
-        [math]::Round(($statusBatch.SyncedCount / $statusBatch.TotalCount) * 100, 0)
+    # Calcular percentual global ponderado:
+    $finalizados = $statusUsuarios | Where-Object { $_.Status -eq 'Completed' }
+    $ativos      = $statusUsuarios | Where-Object { $_.Status -ne 'Completed' }
+
+    $countFinalizados = $finalizados.Count
+    $countAtivos      = $ativos.Count
+
+    if ($total -gt 0) {
+        $mediaFinalizados = 100 # Completed = 100%
+        if ($countAtivos -gt 0) {
+            $mediaAtivos = [math]::Round(($ativos | Measure-Object Percentual -Average).Average, 1)
+        } else {
+            $mediaAtivos = 0
+        }
+
+        $percentualConcluido = [math]::Round((($mediaFinalizados * $countFinalizados) + ($mediaAtivos * $countAtivos)) / $total, 1)
     } else {
-        0
+        $percentualConcluido = 0
     }
 
     Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
@@ -94,7 +121,7 @@ function Verificar-StatusDoBatch {
     $statusResumo = [PSCustomObject]@{
         Identity             = $statusBatch.Identity
         'Percentual Concluido' = "$percentualConcluido%"
-        Status               = $statusBatch.Status.ToString()
+        Status               = if ($percentualConcluido -eq 100) { "Concluido" } elseif ($statusBatch.Status -eq "InProgress") { "Migracao em andamento" } else { $statusBatch.Status.ToString() }
         TotalCount           = $statusBatch.TotalCount
         ActiveCount          = $statusBatch.ActiveCount
         SyncedCount          = $statusBatch.SyncedCount
@@ -208,16 +235,54 @@ function Concluir-Lote {
     param ($batchId)
 
     Write-Host "`nATENCAO: Voce esta prestes a concluir o batch '$batchId'." -ForegroundColor Yellow
-    $confirmar = Read-Host "Deseja realmente concluir o batch? (S/N)"
-    if ($confirmar -match '^[sS]$') {
-        try {
-            Complete-MigrationBatch -Identity $batchId -Confirm:$false -ErrorAction Stop
-            Write-Host "Batch '$batchId' concluido com sucesso!" -ForegroundColor Green
-        } catch {
-            Write-Host "Erro ao concluir o batch: $_" -ForegroundColor Red
-        }
-    } else {
+    
+    $confirmar = Read-Host "Deseja realmente concluir o batch? (S/N) [Padrao: N]"
+    if ([string]::IsNullOrWhiteSpace($confirmar)) {
+        $confirmar = "N"
+    }
+
+    if ($confirmar -notmatch '^[sS]$') {
         Write-Host "Conclusao cancelada pelo usuario." -ForegroundColor DarkGray
+        return
+    }
+
+    Write-Host "`nTentando concluir o batch '$batchId'..." -ForegroundColor Yellow
+
+    try {
+        Complete-MigrationBatch -Identity $batchId -Confirm:$false -ErrorAction Stop
+        Write-Host "Comando de conclusao executado para batch '$batchId'." -ForegroundColor Green
+    }
+    catch {
+        Write-Host "Erro ao tentar concluir o batch: $_" -ForegroundColor Red
+    }
+
+    # Agora vamos verificar se existem usuarios com NeedsApproval e aprovar cada um
+    Write-Host "`nVerificando usuarios com status 'NeedsApproval' para aprovar..." -ForegroundColor Yellow
+    $usersNeedsApproval = Get-MigrationUser -BatchId $batchId | Where-Object { $_.Status -eq "NeedsApproval" }
+
+    if ($usersNeedsApproval.Count -eq 0) {
+        Write-Host "Nenhum usuario necessita de aprovacao." -ForegroundColor Green
+    }
+    else {
+        foreach ($user in $usersNeedsApproval) {
+            try {
+                Write-Host "Aprovando usuario: $($user.Identity)" -ForegroundColor Cyan
+                Set-MigrationUser -Identity $user.Identity -Approve
+                Write-Host "Usuario $($user.Identity) aprovado com sucesso." -ForegroundColor Green
+            }
+            catch {
+                Write-Host "Erro ao aprovar usuario $($user.Identity): $_" -ForegroundColor Red
+            }
+        }
+        # Opcional: tentar concluir o batch novamente após aprovar os usuários
+        try {
+            Write-Host "`nTentando concluir novamente o batch apos aprovacao dos usuarios..." -ForegroundColor Yellow
+            Complete-MigrationBatch -Identity $batchId -Confirm:$false -ErrorAction Stop
+            Write-Host "Batch '$batchId' concluido com sucesso apos aprovacao." -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Erro ao concluir o batch apos aprovacao: $_" -ForegroundColor Red
+        }
     }
 }
 
