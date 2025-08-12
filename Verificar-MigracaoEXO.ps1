@@ -78,8 +78,6 @@ function Verificar-StatusDoBatch {
             Percentual            = $percentual
             BytesTransferidos     = "$($stats.BytesTransferred)"
             TamanhoEstimado       = "$($stats.EstimatedTotalTransferSize)"
-            ItensTransferidos     = $stats.SyncedItemCount
-            ItensEstimados        = $stats.TotalItemsInSourceMailboxCount
             TaxaTransferencia     = $stats.CurrentBytesTransferredPerMinute
             ConclusaoSyncInicial  = $stats.InitialSeedingCompletedTime
             UltimoSync            = $stats.LastUpdatedTime
@@ -112,7 +110,7 @@ function Verificar-StatusDoBatch {
     $statusUsuarios | Select-Object Usuario, Status,
         @{Name="Percentual %";         Expression = { "$($_.Percentual)%" }},
         @{Name="Bytes/min";            Expression = { $_.TaxaTransferencia }},
-        BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados,
+        BytesTransferidos, TamanhoEstimado,
         @{Name="ConclusaoSyncInicial"; Expression = { $_.ConclusaoSyncInicial }},
         UltimoSync |
         Format-Table -AutoSize
