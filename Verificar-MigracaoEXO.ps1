@@ -62,27 +62,28 @@ function Verificar-StatusDoBatch {
     $statusUsuarios = @()
 
     $usuarios | ForEach-Object {
-        $contador++
-        $percentualProgresso = [math]::Round(($contador / $total) * 100)
+    $contador++
+    $percentualProgresso = [math]::Round(($contador / $total) * 100)
 
-        Write-Progress -Activity "Consultando usuarios no batch '$batchId'" `
-                       -Status "$contador de $total processados..." `
-                       -PercentComplete $percentualProgresso
+    # Barra de progresso com contador de usuarios processados
+    Write-Progress -Activity "Migracao do batch '$batchId'" `
+                   -Status "Usuario $contador de $total processado ($percentualProgresso%)" `
+                   -PercentComplete $percentualProgresso
 
-        $stats = Get-MigrationUserStatistics -Identity $_.Identity
-        $percentual = if ($stats.PercentageComplete -ne $null) { $stats.PercentageComplete } else { 0 }
+    $stats = Get-MigrationUserStatistics -Identity $_.Identity
+    $percentual = if ($stats.PercentageComplete -ne $null) { $stats.PercentageComplete } else { 0 }
 
-        $statusUsuarios += [PSCustomObject]@{
-            Usuario               = $_.Identity
-            Status                = $stats.Status
-            Percentual            = $percentual
-            BytesTransferidos     = "$($stats.BytesTransferred)"
-            TamanhoEstimado       = "$($stats.EstimatedTotalTransferSize)"
-            TaxaTransferencia     = $stats.CurrentBytesTransferredPerMinute
-            ConclusaoSyncInicial  = $stats.InitialSeedingCompletedTime
-            UltimoSync            = $stats.LastUpdatedTime
-        }
+    $statusUsuarios += [PSCustomObject]@{
+        Usuario               = $_.Identity
+        Status                = $stats.Status
+        Percentual            = $percentual
+        BytesTransferidos     = "$($stats.BytesTransferred)"
+        TamanhoEstimado       = "$($stats.EstimatedTotalTransferSize)"
+        TaxaTransferencia     = $stats.CurrentBytesTransferredPerMinute
+        ConclusaoSyncInicial  = $stats.InitialSeedingCompletedTime
+        UltimoSync            = $stats.LastUpdatedTime
     }
+}
 
     $statusUsuarios = $statusUsuarios | Sort-Object Percentual
 
