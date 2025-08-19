@@ -54,109 +54,109 @@ Import-Module ExchangeOnlineManagement
 function Verificar-StatusDoBatch {
     param ($batchId)
 
-    $statusBatch = Get-MigrationBatch -Identity $batchId
+    do {
+        $statusBatch = Get-MigrationBatch -Identity $batchId
 
-    $usuarios = Get-MigrationUser -BatchId $batchId
-    $total = $usuarios.Count
-    $contador = 0
-    $statusUsuarios = @()
+        $usuarios = Get-MigrationUser -BatchId $batchId
+        $total = $usuarios.Count
+        $contador = 0
+        $statusUsuarios = @()
 
-    $usuarios | ForEach-Object {
-    $contador++
-    $percentualProgresso = [math]::Round(($contador / $total) * 100)
+        $usuarios | ForEach-Object {
+            $contador++
+            $percentualProgresso = [math]::Round(($contador / $total) * 100)
 
-    # Barra de progresso com contador de usuarios processados
-    Write-Progress -Activity "Migracao do batch '$batchId'" `
-                   -Status "Usuario $contador de $total processado ($percentualProgresso%)" `
-                   -PercentComplete $percentualProgresso
+            # Barra de progresso com contador de usuarios processados
+            Write-Progress -Activity "Migracao do batch '$batchId'" `
+                           -Status "Usuario $contador de $total processado ($percentualProgresso%)" `
+                           -PercentComplete $percentualProgresso
 
-    $stats = Get-MigrationUserStatistics -Identity $_.Identity
-    $percentual = if ($stats.PercentageComplete -ne $null) { $stats.PercentageComplete } else { 0 }
+            $stats = Get-MigrationUserStatistics -Identity $_.Identity
+            $percentual = if ($stats.PercentageComplete -ne $null) { $stats.PercentageComplete } else { 0 }
 
-    $statusUsuarios += [PSCustomObject]@{
-        Usuario               = $_.Identity
-        Status                = $stats.Status
-        Percentual            = $percentual
-        BytesTransferidos     = "$($stats.BytesTransferred)"
-        TamanhoEstimado       = "$($stats.EstimatedTotalTransferSize)"
-        TaxaTransferencia     = $stats.CurrentBytesTransferredPerMinute
-        ConclusaoSyncInicial  = $stats.InitialSeedingCompletedTime
-        UltimoSync            = $stats.LastUpdatedTime
-    }
-}
-
-    $statusUsuarios = $statusUsuarios | Sort-Object Percentual
-
-    # Calcular percentual global ponderado:
-    $finalizados = $statusUsuarios | Where-Object { $_.Status -eq 'Completed' }
-    $ativos      = $statusUsuarios | Where-Object { $_.Status -ne 'Completed' }
-
-    $countFinalizados = $finalizados.Count
-    $countAtivos      = $ativos.Count
-
-    if ($total -gt 0) {
-        $mediaFinalizados = 100 # Completed = 100%
-        if ($countAtivos -gt 0) {
-            $mediaAtivos = [math]::Round(($ativos | Measure-Object Percentual -Average).Average, 1)
-        } else {
-            $mediaAtivos = 0
+            $statusUsuarios += [PSCustomObject]@{
+                Usuario               = $_.Identity
+                Status                = $stats.Status
+                Percentual            = $percentual
+                BytesTransferidos     = "$($stats.BytesTransferred)"
+                TamanhoEstimado       = "$($stats.EstimatedTotalTransferSize)"
+                TaxaTransferencia     = $stats.CurrentBytesTransferredPerMinute
+                ConclusaoSyncInicial  = $stats.InitialSeedingCompletedTime
+                UltimoSync            = $stats.LastUpdatedTime
+            }
         }
 
-        $percentualConcluido = [math]::Round((($mediaFinalizados * $countFinalizados) + ($mediaAtivos * $countAtivos)) / $total, 1)
-    } else {
-        $percentualConcluido = 0
-    }
+        $statusUsuarios = $statusUsuarios | Sort-Object Percentual
 
-    Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
-    $statusUsuarios | Select-Object Usuario, Status,
-        @{Name="Percentual %";         Expression = { "$($_.Percentual)%" }},
-        @{Name="Bytes/min";            Expression = { $_.TaxaTransferencia }},
-        BytesTransferidos, TamanhoEstimado,
-        @{Name="ConclusaoSyncInicial"; Expression = { $_.ConclusaoSyncInicial }},
-        UltimoSync |
-        Format-Table -AutoSize
+        # Calcular percentual global ponderado
+        $finalizados = $statusUsuarios | Where-Object { $_.Status -eq 'Completed' }
+        $ativos      = $statusUsuarios | Where-Object { $_.Status -ne 'Completed' }
 
-    Write-Host "`nResumo do batch:" -ForegroundColor Cyan
-    $statusResumo = [PSCustomObject]@{
-        Identity             = $statusBatch.Identity
-        'Percentual Concluido' = "$percentualConcluido%"
-        Status               = if ($percentualConcluido -eq 100) { "Concluido" } elseif ($statusBatch.Status -eq "InProgress") { "Migracao em andamento" } else { $statusBatch.Status.ToString() }
-        TotalCount           = $statusBatch.TotalCount
-        ActiveCount          = $statusBatch.ActiveCount
-        SyncedCount          = $statusBatch.SyncedCount
-        FailedCount          = $statusBatch.FailedCount
-        FinalizedCount       = $statusBatch.FinalizedCount
-        CreationDateTime     = $statusBatch.CreationDateTime
-        CompleteAfter        = $statusBatch.CompleteAfter
-    }
-    $statusResumo | Format-List
+        $countFinalizados = $finalizados.Count
+        $countAtivos      = $ativos.Count
 
-    $salvar = Read-Host "`nDeseja salvar essas informacoes em um arquivo txt no Desktop? (S/N)"
-    if ($salvar -match '^[sS]$') {
-        $timestamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
-        $desktop   = [Environment]::GetFolderPath("Desktop")
-        $path      = "$desktop\Status_Migracao_$batchId`_$timestamp.txt"
+        if ($total -gt 0) {
+            $mediaFinalizados = 100 # Completed = 100%
+            $mediaAtivos = if ($countAtivos -gt 0) { [math]::Round(($ativos | Measure-Object Percentual -Average).Average, 1) } else { 0 }
+            $percentualConcluido = [math]::Round((($mediaFinalizados * $countFinalizados) + ($mediaAtivos * $countAtivos)) / $total, 1)
+        } else {
+            $percentualConcluido = 0
+        }
 
-        $logContent  = @()
-        $logContent += "Resumo do batch '$batchId'"
-        $logContent += "-----------------------------------"
-        $logContent += ($statusResumo | Format-List | Out-String)
-
-        $logContent += "`nStatus detalhado dos usuarios:"
-        $logContent += "-------------------------------"
-        $logContent += ($statusUsuarios | Select-Object Usuario, Status,
+        Write-Host "`nStatus detalhado dos usuarios no batch:" -ForegroundColor Cyan
+        $statusUsuarios | Select-Object Usuario, Status,
             @{Name="Percentual %";         Expression = { "$($_.Percentual)%" }},
             @{Name="Bytes/min";            Expression = { $_.TaxaTransferencia }},
-            BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados,
+            BytesTransferidos, TamanhoEstimado,
             @{Name="ConclusaoSyncInicial"; Expression = { $_.ConclusaoSyncInicial }},
             UltimoSync |
-            Format-Table -AutoSize | Out-String)
+            Format-Table -AutoSize
 
-        $logString = $logContent -join "`r`n"
-        Create-Log -FileNamePrefix "Status_Migracao_$batchId" -Content $logString
-    } else {
-        Write-Host "`nLog nao gerado." -ForegroundColor DarkGray
-    }
+        Write-Host "`nResumo do batch:" -ForegroundColor Cyan
+        $statusResumo = [PSCustomObject]@{
+            Identity             = $statusBatch.Identity
+            'Percentual Concluido' = "$percentualConcluido%"
+            Status               = if ($percentualConcluido -eq 100) { "Concluido" } elseif ($statusBatch.Status -eq "InProgress") { "Migracao em andamento" } else { $statusBatch.Status.ToString() }
+            TotalCount           = $statusBatch.TotalCount
+            ActiveCount          = $statusBatch.ActiveCount
+            SyncedCount          = $statusBatch.SyncedCount
+            FailedCount          = $statusBatch.FailedCount
+            FinalizedCount       = $statusBatch.FinalizedCount
+            CreationDateTime     = $statusBatch.CreationDateTime
+            CompleteAfter        = $statusBatch.CompleteAfter
+        }
+        $statusResumo | Format-List
+
+        $salvar = Read-Host "`nDeseja salvar essas informacoes em um arquivo txt no Desktop? (S/N)"
+        if ($salvar -match '^[sS]$') {
+            $timestamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
+            $desktop   = [Environment]::GetFolderPath("Desktop")
+            $path      = "$desktop\Status_Migracao_$batchId`_$timestamp.txt"
+
+            $logContent  = @()
+            $logContent += "Resumo do batch '$batchId'"
+            $logContent += "-----------------------------------"
+            $logContent += ($statusResumo | Format-List | Out-String)
+
+            $logContent += "`nStatus detalhado dos usuarios:"
+            $logContent += "-------------------------------"
+            $logContent += ($statusUsuarios | Select-Object Usuario, Status,
+                @{Name="Percentual %";         Expression = { "$($_.Percentual)%" }},
+                @{Name="Bytes/min";            Expression = { $_.TaxaTransferencia }},
+                BytesTransferidos, TamanhoEstimado, ItensTransferidos, ItensEstimados,
+                @{Name="ConclusaoSyncInicial"; Expression = { $_.ConclusaoSyncInicial }},
+                UltimoSync |
+                Format-Table -AutoSize | Out-String)
+
+            $logString = $logContent -join "`r`n"
+            Create-Log -FileNamePrefix "Status_Migracao_$batchId" -Content $logString
+        } else {
+            Write-Host "`nLog nao gerado." -ForegroundColor DarkGray
+        }
+
+        # Pergunta para repetir a verificação do batch
+        $resposta = Read-Host "`nDeseja verificar novamente o status do lote? (S/N)"
+    } while ($resposta -match '^[sS]$')
 }
 
 function Verificar-ErrosDoBatch {
