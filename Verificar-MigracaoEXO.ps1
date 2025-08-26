@@ -344,7 +344,12 @@ function ListarBatches {
         exit
     }
 
+    # Exibir tabela dos batches
     $global:batches | Format-Table Identity, Status, MigrationType, TotalCount, CreationDateTime -AutoSize
+
+    # Somar TotalCount de todos os batches
+    $totalUsuariosMigrados = ($global:batches | Measure-Object -Property TotalCount -Sum).Sum
+    Write-Host "`nContagem total de usuarios nos batches listados: $totalUsuariosMigrados" -ForegroundColor Green
 }
 
 # Lista batches inicialmente
