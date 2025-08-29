@@ -16,7 +16,6 @@
         - Modulo ExchangeOnlineManagement instalado
         - Permissoes administrativas no Exchange Online
         - Conexao ativa via Connect-ExchangeOnline
-        - Arquivo CSV com usuarios: "MigrationUsersList.csv"
 
     .OBSERVACOES
         - Logs sao gerados no mesmo diretorio do script com data e hora
@@ -408,3 +407,4 @@ do {
         }
     }
 } while ($opcao -ne "5")
+
