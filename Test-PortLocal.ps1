@@ -19,7 +19,7 @@
 function Test-PortLocal {
     param (
         [int[]]$Ports,
-        [int[]]$Range
+        [object]$Range
     )
 
     if ($Ports) {
@@ -37,8 +37,15 @@ function Test-PortLocal {
     }
 
     if ($Range) {
+        $expandedRange = @()
+        if ($Range -is [Array]) {
+            $expandedRange = $Range
+        } else {
+            $expandedRange = Invoke-Expression $Range
+        }
+
         Write-Host "`nVerificando range de portas...`n" -ForegroundColor Yellow
-        $Range | ForEach-Object {
+        $expandedRange | ForEach-Object {
             [PSCustomObject]@{
                 Porta  = $_
                 Status = if (Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue) {
