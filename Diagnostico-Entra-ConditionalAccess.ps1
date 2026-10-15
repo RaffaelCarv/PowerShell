@@ -56,7 +56,6 @@ Versao: 1.2.0
 
 Release Notes:
 1.2.0
-- Recriado o cabecalho no padrao de ajuda comentada adotado pelo autor.
 - Corrigido o erro PropertyNotFoundStrict em propriedades opcionais.
 - Adicionada leitura segura para Hashtable, OrderedDictionary e PSCustomObject.
 - Adicionado valor Nao informado para propriedades ausentes no Microsoft Graph.
